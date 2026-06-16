@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "topographic-maps"
+version = "0.1.0"
+description = "Standalone topographic heightmap pathing demo using Pathing RFR terrain solvers."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["Pillow"]
+
+[project.scripts]
+topographic-route = "topographic_maps.demo:main"
+
+[tool.setuptools.packages.find]
+include = ["topographic_maps*"]

@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+title: "Residual Frontier Refinement: Exact Shortest-Path Propagation with Adaptive Partial Ordering"
+message: "If you use this software, please cite it using these metadata."
+type: software
+authors:
+  - family-names: Petrik
+    given-names: Morgan
+    affiliation: Militant.AI
+    email: mpetrik@militant.ai
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.20329104
+repository-code: "https://github.com/MilitantAI/RFR"
+license: CC-BY-4.0
+version: 1.0.0
+date-released: 2026-05-22
+keywords:
+  - shortest-path algorithms
+  - pathfinding
+  - terrain-aware routing
+  - grid-based path planning
+  - residual frontier refinement
+  - Dijkstra comparison

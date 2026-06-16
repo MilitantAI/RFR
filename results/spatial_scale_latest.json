@@ -1,0 +1,68 @@
+{
+  "generated_at": "2026-05-13T02:24:45.786393+00:00",
+  "experiment": "spatial differential scaling",
+  "repeats": 3,
+  "resolution": 1.0,
+  "gradient": {
+    "x": 0.2,
+    "y": 0.05
+  },
+  "summary": [
+    {
+      "size": 16,
+      "points": 256,
+      "directed_edges": 960,
+      "correct": true,
+      "spatial_time_s": 0.0007786999995005317,
+      "graph_build_time_s": 0.0007138000000850298,
+      "dijkstra_solve_time_s": 0.0003713999976753257,
+      "dijkstra_total_time_s": 0.0010851999977603555,
+      "spatial_over_dijkstra_solve": 2.0966612934156874,
+      "spatial_over_dijkstra_total": 0.7175635837703824,
+      "spatial_updates": 275,
+      "spatial_queue_pops": 276
+    },
+    {
+      "size": 32,
+      "points": 1024,
+      "directed_edges": 3968,
+      "correct": true,
+      "spatial_time_s": 0.003195500001311302,
+      "graph_build_time_s": 0.00298339999790187,
+      "dijkstra_solve_time_s": 0.0016394999984186143,
+      "dijkstra_total_time_s": 0.004622899996320484,
+      "spatial_over_dijkstra_solve": 1.9490698410451561,
+      "spatial_over_dijkstra_total": 0.6912327767969682,
+      "spatial_updates": 1426,
+      "spatial_queue_pops": 1427
+    },
+    {
+      "size": 64,
+      "points": 4096,
+      "directed_edges": 16128,
+      "correct": true,
+      "spatial_time_s": 0.013102900000376394,
+      "graph_build_time_s": 0.012450199999875622,
+      "dijkstra_solve_time_s": 0.0063848999998299405,
+      "dijkstra_total_time_s": 0.018835099999705562,
+      "spatial_over_dijkstra_solve": 2.0521699636212603,
+      "spatial_over_dijkstra_total": 0.6956639465987026,
+      "spatial_updates": 5079,
+      "spatial_queue_pops": 5080
+    },
+    {
+      "size": 96,
+      "points": 9216,
+      "directed_edges": 36480,
+      "correct": true,
+      "spatial_time_s": 0.03184060000057798,
+      "graph_build_time_s": 0.02862509999977192,
+      "dijkstra_solve_time_s": 0.015488100001675775,
+      "dijkstra_total_time_s": 0.044113200001447694,
+      "spatial_over_dijkstra_solve": 2.0558105898808052,
+      "spatial_over_dijkstra_total": 0.7217930233928403,
+      "spatial_updates": 10612,
+      "spatial_queue_pops": 10613
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rfr"
+version = "1.0.0"
+description = "Residual Frontier Refinement: exact shortest-path propagation with adaptive partial ordering."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "CC-BY-4.0" }
+authors = [{ name = "Morgan Petrik", email = "mpetrik@militant.ai" }]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/MilitantAI/RFR"
+Documentation = "https://doi.org/10.5281/zenodo.20329104"
+"Bug Tracker" = "https://github.com/MilitantAI/RFR/issues"
+
+[project.scripts]
+rfr-benchmark = "rfr.benchmark:main"
+rfr-operational = "rfr.operational:main"
+rfr-specialisation = "rfr.specialisation:main"
+rfr-spatial-scale = "rfr.spatial_scale:main"
+
+[tool.setuptools.packages.find]
+include = ["rfr*"]

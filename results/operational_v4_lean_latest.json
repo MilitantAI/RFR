@@ -1,0 +1,739 @@
+{
+  "generated_at": "2026-05-11T14:20:25.642982+00:00",
+  "algorithm": "RFR v4 lean operational",
+  "baseline": "Dijkstra",
+  "instances": 3,
+  "repeats": 5,
+  "samples": [
+    {
+      "family": "road-like grid",
+      "seed": 0,
+      "correct": true,
+      "dijkstra_time_s": 0.00045510000200010836,
+      "rfr_time_s": 0.0026435999970999546,
+      "time_ratio_rfr_over_dijkstra": 5.808833191565939,
+      "dijkstra_work": {
+        "settled_vertices": 324,
+        "relaxations": 1224,
+        "distance_updates": 376,
+        "global_order_operations": 754,
+        "local_resolution_operations": 0,
+        "band_splits": 0,
+        "safe_band_batches": 0,
+        "local_heap_fallbacks": 0,
+        "heap_peak_size": 25,
+        "frontier_peak_size": 0
+      },
+      "rfr_work": {
+        "settled_vertices": 376,
+        "relaxations": 1414,
+        "distance_updates": 443,
+        "global_order_operations": 0,
+        "local_resolution_operations": 424,
+        "band_splits": 1,
+        "safe_band_batches": 47,
+        "local_heap_fallbacks": 47,
+        "heap_peak_size": 0,
+        "frontier_peak_size": 18
+      },
+      "global_order_operations_avoided": 754,
+      "resolution_efficiency": 1.778301886792453,
+      "rfr_initial_policy": {
+        "mode": "road geometry -> broad directional bands",
+        "band_width": 1.800722585159099,
+        "residual_threshold": 0.35,
+        "local_scan_limit": 18,
+        "max_refinement_depth": 8
+      },
+      "rfr_final_policy": {
+        "mode": "road geometry -> broad directional bands",
+        "band_width": 1.800722585159099,
+        "residual_threshold": 0.35,
+        "local_scan_limit": 18,
+        "max_refinement_depth": 8
+      },
+      "rfr_probe_summary": {
+        "settled_vertices": 52,
+        "split_pressure": 0.0,
+        "fallback_rate": 0.19230769230769232,
+        "safe_batch_ratio": 1.0,
+        "average_residual": 1.2720464075616449,
+        "average_cross_edge_risk": 0.0,
+        "average_volatility": 1.1157936507936508
+      }
+    },
+    {
+      "family": "road-like grid",
+      "seed": 1,
+      "correct": true,
+      "dijkstra_time_s": 0.0004535000043688342,
+      "rfr_time_s": 0.0025720999983604997,
+      "time_ratio_rfr_over_dijkstra": 5.671664770853223,
+      "dijkstra_work": {
+        "settled_vertices": 324,
+        "relaxations": 1224,
+        "distance_updates": 376,
+        "global_order_operations": 754,
+        "local_resolution_operations": 0,
+        "band_splits": 0,
+        "safe_band_batches": 0,
+        "local_heap_fallbacks": 0,
+        "heap_peak_size": 24,
+        "frontier_peak_size": 0
+      },
+      "rfr_work": {
+        "settled_vertices": 378,
+        "relaxations": 1421,
+        "distance_updates": 449,
+        "global_order_operations": 0,
+        "local_resolution_operations": 426,
+        "band_splits": 1,
+        "safe_band_batches": 47,
+        "local_heap_fallbacks": 47,
+        "heap_peak_size": 0,
+        "frontier_peak_size": 18
+      },
+      "global_order_operations_avoided": 754,
+      "resolution_efficiency": 1.7699530516431925,
+      "rfr_initial_policy": {
+        "mode": "road geometry -> broad directional bands",
+        "band_width": 1.8010869405518954,
+        "residual_threshold": 0.35,
+        "local_scan_limit": 18,
+        "max_refinement_depth": 8
+      },
+      "rfr_final_policy": {
+        "mode": "road geometry -> broad directional bands",
+        "band_width": 1.8010869405518954,
+        "residual_threshold": 0.35,
+        "local_scan_limit": 18,
+        "max_refinement_depth": 8
+      },
+      "rfr_probe_summary": {
+        "settled_vertices": 54,
+        "split_pressure": 0.0,
+        "fallback_rate": 0.18518518518518517,
+        "safe_batch_ratio": 1.0,
+        "average_residual": 1.3395473527283197,
+        "average_cross_edge_risk": 0.0,
+        "average_volatility": 1.1788888888888889
+      }
+    },
+    {
+      "family": "road-like grid",
+      "seed": 2,
+      "correct": true,
+      "dijkstra_time_s": 0.0004600000029313378,
+      "rfr_time_s": 0.002567099996667821,
+      "time_ratio_rfr_over_dijkstra": 5.580652131106619,
+      "dijkstra_work": {
+        "settled_vertices": 324,
+        "relaxations": 1224,
+        "distance_updates": 380,
+        "global_order_operations": 762,
+        "local_resolution_operations": 0,
+        "band_splits": 0,
+        "safe_band_batches": 0,
+        "local_heap_fallbacks": 0,
+        "heap_peak_size": 25,
+        "frontier_peak_size": 0
+      },
+      "rfr_work": {
+        "settled_vertices": 375,
+        "relaxations": 1410,
+        "distance_updates": 449,
+        "global_order_operations": 0,
+        "local_resolution_operations": 423,
+        "band_splits": 1,
+        "safe_band_batches": 47,
+        "local_heap_fallbacks": 47,
+        "heap_peak_size": 0,
+        "frontier_peak_size": 18
+      },
+      "global_order_operations_avoided": 762,
+      "resolution_efficiency": 1.801418439716312,
+      "rfr_initial_policy": {
+        "mode": "road geometry -> broad directional bands",
+        "band_width": 1.8007950849689116,
+        "residual_threshold": 0.35,
+        "local_scan_limit": 18,
+        "max_refinement_depth": 8
+      },
+      "rfr_final_policy": {
+        "mode": "road geometry -> broad directional bands",
+        "band_width": 1.8007950849689116,
+        "residual_threshold": 0.35,
+        "local_scan_limit": 18,
+        "max_refinement_depth": 8
+      },
+      "rfr_probe_summary": {
+        "settled_vertices": 51,
+        "split_pressure": 0.0,
+        "fallback_rate": 0.19607843137254902,
+        "safe_batch_ratio": 1.0,
+        "average_residual": 1.3379765204120495,
+        "average_cross_edge_risk": 0.0,
+        "average_volatility": 1.2419047619047618
+      }
+    },
+    {
+      "family": "clustered basins",
+      "seed": 0,
+      "correct": true,
+      "dijkstra_time_s": 0.00033569999504834414,
+      "rfr_time_s": 0.002847800002200529,
+      "time_ratio_rfr_over_dijkstra": 8.483169628258164,
+      "dijkstra_work": {
+        "settled_vertices": 128,
+        "relaxations": 1934,
+        "distance_updates": 127,
+        "global_order_operations": 256,
+        "local_resolution_operations": 0,
+        "band_splits": 0,
+        "safe_band_batches": 0,
+        "local_heap_fallbacks": 0,
+        "heap_peak_size": 15,
+        "frontier_peak_size": 0
+      },
+      "rfr_work": {
+        "settled_vertices": 160,
+        "relaxations": 2417,
+        "distance_updates": 159,
+        "global_order_operations": 0,
+        "local_resolution_operations": 182,
+        "band_splits": 0,
+        "safe_band_batches": 22,
+        "local_heap_fallbacks": 22,
+        "heap_peak_size": 0,
+        "frontier_peak_size": 15
+      },
+      "global_order_operations_avoided": 256,
+      "resolution_efficiency": 1.4065934065934067,
+      "rfr_initial_policy": {
+        "mode": "cluster structure -> basin-first propagation",
+        "band_width": 1.4505304509612293,
+        "residual_threshold": 0.3,
+        "local_scan_limit": 14,
+        "max_refinement_depth": 10
+      },
+      "rfr_final_policy": {
+        "mode": "cluster structure -> basin-first propagation",
+        "band_width": 1.4505304509612293,
+        "residual_threshold": 0.3,
+        "local_scan_limit": 14,
+        "max_refinement_depth": 10
+      },
+      "rfr_probe_summary": {
+        "settled_vertices": 32,
+        "split_pressure": 0.0,
+        "fallback_rate": 0.125,
+        "safe_batch_ratio": 1.0,
+        "average_residual": 1.2774699381541814,
+        "average_cross_edge_risk": 0.0,
+        "average_volatility": 1.0
+      }
+    },
+    {
+      "family": "clustered basins",
+      "seed": 1,
+      "correct": true,
+      "dijkstra_time_s": 0.00032049999572336674,
+      "rfr_time_s": 0.002878199993574526,
+      "time_ratio_rfr_over_dijkstra": 8.980343313510643,
+      "dijkstra_work": {
+        "settled_vertices": 128,
+        "relaxations": 1934,
+        "distance_updates": 127,
+        "global_order_operations": 256,
+        "local_resolution_operations": 0,
+        "band_splits": 0,
+        "safe_band_batches": 0,
+        "local_heap_fallbacks": 0,
+        "heap_peak_size": 15,
+        "frontier_peak_size": 0
+      },
+      "rfr_work": {
+        "settled_vertices": 160,
+        "relaxations": 2417,
+        "distance_updates": 159,
+        "global_order_operations": 0,
+        "local_resolution_operations": 181,
+        "band_splits": 0,
+        "safe_band_batches": 21,
+        "local_heap_fallbacks": 21,
+        "heap_peak_size": 0,
+        "frontier_peak_size": 15
+      },
+      "global_order_operations_avoided": 256,
+      "resolution_efficiency": 1.4143646408839778,
+      "rfr_initial_policy": {
+        "mode": "cluster structure -> basin-first propagation",
+        "band_width": 1.4565427036389043,
+        "residual_threshold": 0.3,
+        "local_scan_limit": 14,
+        "max_refinement_depth": 10
+      },
+      "rfr_final_policy": {
+        "mode": "cluster structure -> basin-first propagation",
+        "band_width": 1.4565427036389043,
+        "residual_threshold": 0.3,
+        "local_scan_limit": 14,
+        "max_refinement_depth": 10
+      },
+      "rfr_probe_summary": {
+        "settled_vertices": 32,
+        "split_pressure": 0.0,
+        "fallback_rate": 0.125,
+        "safe_batch_ratio": 1.0,
+        "average_residual": 1.2964066557463256,
+        "average_cross_edge_risk": 0.0,
+        "average_volatility": 1.0
+      }
+    },
+    {
+      "family": "clustered basins",
+      "seed": 2,
+      "correct": true,
+      "dijkstra_time_s": 0.00032469999860040843,
+      "rfr_time_s": 0.00279210000007879,
+      "time_ratio_rfr_over_dijkstra": 8.599014512207878,
+      "dijkstra_work": {
+        "settled_vertices": 128,
+        "relaxations": 1934,
+        "distance_updates": 127,
+        "global_order_operations": 256,
+        "local_resolution_operations": 0,
+        "band_splits": 0,
+        "safe_band_batches": 0,
+        "local_heap_fallbacks": 0,
+        "heap_peak_size": 15,
+        "frontier_peak_size": 0
+      },
+      "rfr_work": {
+        "settled_vertices": 154,
+        "relaxations": 2327,
+        "distance_updates": 159,
+        "global_order_operations": 0,
+        "local_resolution_operations": 175,
+        "band_splits": 0,
+        "safe_band_batches": 21,
+        "local_heap_fallbacks": 21,
+        "heap_peak_size": 0,
+        "frontier_peak_size": 15
+      },
+      "global_order_operations_avoided": 256,
+      "resolution_efficiency": 1.4628571428571429,
+      "rfr_initial_policy": {
+        "mode": "cluster structure -> basin-first propagation",
+        "band_width": 1.4553338030620238,
+        "residual_threshold": 0.3,
+        "local_scan_limit": 14,
+        "max_refinement_depth": 10
+      },
+      "rfr_final_policy": {
+        "mode": "cluster structure -> basin-first propagation",
+        "band_width": 1.4553338030620238,
+        "residual_threshold": 0.3,
+        "local_scan_limit": 14,
+        "max_refinement_depth": 10
+      },
+      "rfr_probe_summary": {
+        "settled_vertices": 26,
+        "split_pressure": 0.0,
+        "fallback_rate": 0.15384615384615385,
+        "safe_batch_ratio": 1.0,
+        "average_residual": 1.3637273883621663,
+        "average_cross_edge_risk": 0.09926470588235294,
+        "average_volatility": 1.0
+      }
+    },
+    {
+      "family": "random dense-ish",
+      "seed": 0,
+      "correct": true,
+      "dijkstra_time_s": 0.00048609999794280156,
+      "rfr_time_s": 0.004990499997802544,
+      "time_ratio_rfr_over_dijkstra": 10.266406128209379,
+      "dijkstra_work": {
+        "settled_vertices": 120,
+        "relaxations": 2428,
+        "distance_updates": 318,
+        "global_order_operations": 638,
+        "local_resolution_operations": 0,
+        "band_splits": 0,
+        "safe_band_batches": 0,
+        "local_heap_fallbacks": 0,
+        "heap_peak_size": 234,
+        "frontier_peak_size": 0
+      },
+      "rfr_work": {
+        "settled_vertices": 145,
+        "relaxations": 2952,
+        "distance_updates": 542,
+        "global_order_operations": 0,
+        "local_resolution_operations": 207,
+        "band_splits": 28,
+        "safe_band_batches": 34,
+        "local_heap_fallbacks": 34,
+        "heap_peak_size": 0,
+        "frontier_peak_size": 101
+      },
+      "global_order_operations_avoided": 638,
+      "resolution_efficiency": 3.082125603864734,
+      "rfr_initial_policy": {
+        "mode": "low ambiguity -> broad bands",
+        "band_width": 6.126528716257432,
+        "residual_threshold": 0.22,
+        "local_scan_limit": 10,
+        "max_refinement_depth": 12
+      },
+      "rfr_final_policy": {
+        "mode": "low ambiguity -> broad bands -> probe revised: hybrid/local exact",
+        "band_width": 3.3695907939415877,
+        "residual_threshold": 0.1,
+        "local_scan_limit": 4,
+        "max_refinement_depth": 16
+      },
+      "rfr_probe_summary": {
+        "settled_vertices": 25,
+        "split_pressure": 0.47058823529411764,
+        "fallback_rate": 0.36,
+        "safe_batch_ratio": 0.5294117647058824,
+        "average_residual": 2.2768355774449387,
+        "average_cross_edge_risk": 0.3449062136529157,
+        "average_volatility": 1.0247821350762527
+      }
+    },
+    {
+      "family": "random dense-ish",
+      "seed": 1,
+      "correct": true,
+      "dijkstra_time_s": 0.0004965000043739565,
+      "rfr_time_s": 0.004761399999551941,
+      "time_ratio_rfr_over_dijkstra": 9.589929421160134,
+      "dijkstra_work": {
+        "settled_vertices": 120,
+        "relaxations": 2478,
+        "distance_updates": 319,
+        "global_order_operations": 640,
+        "local_resolution_operations": 0,
+        "band_splits": 0,
+        "safe_band_batches": 0,
+        "local_heap_fallbacks": 0,
+        "heap_peak_size": 232,
+        "frontier_peak_size": 0
+      },
+      "rfr_work": {
+        "settled_vertices": 140,
+        "relaxations": 2895,
+        "distance_updates": 531,
+        "global_order_operations": 0,
+        "local_resolution_operations": 196,
+        "band_splits": 26,
+        "safe_band_batches": 30,
+        "local_heap_fallbacks": 30,
+        "heap_peak_size": 0,
+        "frontier_peak_size": 98
+      },
+      "global_order_operations_avoided": 640,
+      "resolution_efficiency": 3.2653061224489797,
+      "rfr_initial_policy": {
+        "mode": "low ambiguity -> broad bands",
+        "band_width": 6.016907752767864,
+        "residual_threshold": 0.22,
+        "local_scan_limit": 10,
+        "max_refinement_depth": 12
+      },
+      "rfr_final_policy": {
+        "mode": "low ambiguity -> broad bands -> probe revised: hybrid/local exact",
+        "band_width": 3.3092992640223255,
+        "residual_threshold": 0.1,
+        "local_scan_limit": 4,
+        "max_refinement_depth": 16
+      },
+      "rfr_probe_summary": {
+        "settled_vertices": 20,
+        "split_pressure": 0.5,
+        "fallback_rate": 0.3,
+        "safe_batch_ratio": 0.5,
+        "average_residual": 2.380268110632416,
+        "average_cross_edge_risk": 0.3188857853944002,
+        "average_volatility": 1.0
+      }
+    },
+    {
+      "family": "random dense-ish",
+      "seed": 2,
+      "correct": true,
+      "dijkstra_time_s": 0.0004861000052187592,
+      "rfr_time_s": 0.0050351000027148984,
+      "time_ratio_rfr_over_dijkstra": 10.358156652248866,
+      "dijkstra_work": {
+        "settled_vertices": 120,
+        "relaxations": 2510,
+        "distance_updates": 308,
+        "global_order_operations": 618,
+        "local_resolution_operations": 0,
+        "band_splits": 0,
+        "safe_band_batches": 0,
+        "local_heap_fallbacks": 0,
+        "heap_peak_size": 227,
+        "frontier_peak_size": 0
+      },
+      "rfr_work": {
+        "settled_vertices": 143,
+        "relaxations": 3007,
+        "distance_updates": 519,
+        "global_order_operations": 0,
+        "local_resolution_operations": 212,
+        "band_splits": 33,
+        "safe_band_batches": 36,
+        "local_heap_fallbacks": 36,
+        "heap_peak_size": 0,
+        "frontier_peak_size": 96
+      },
+      "global_order_operations_avoided": 618,
+      "resolution_efficiency": 2.9150943396226414,
+      "rfr_initial_policy": {
+        "mode": "low ambiguity -> broad bands",
+        "band_width": 6.121010089170985,
+        "residual_threshold": 0.22,
+        "local_scan_limit": 10,
+        "max_refinement_depth": 12
+      },
+      "rfr_final_policy": {
+        "mode": "low ambiguity -> broad bands -> probe revised: hybrid/local exact",
+        "band_width": 3.366555549044042,
+        "residual_threshold": 0.1,
+        "local_scan_limit": 4,
+        "max_refinement_depth": 16
+      },
+      "rfr_probe_summary": {
+        "settled_vertices": 23,
+        "split_pressure": 0.5263157894736842,
+        "fallback_rate": 0.391304347826087,
+        "safe_batch_ratio": 0.47368421052631576,
+        "average_residual": 2.239846110993821,
+        "average_cross_edge_risk": 0.35538442032056683,
+        "average_volatility": 1.0
+      }
+    },
+    {
+      "family": "irregular weighted",
+      "seed": 0,
+      "correct": true,
+      "dijkstra_time_s": 0.00043310000182827935,
+      "rfr_time_s": 0.004400999998324551,
+      "time_ratio_rfr_over_dijkstra": 10.161625443884232,
+      "dijkstra_work": {
+        "settled_vertices": 120,
+        "relaxations": 2240,
+        "distance_updates": 272,
+        "global_order_operations": 546,
+        "local_resolution_operations": 0,
+        "band_splits": 0,
+        "safe_band_batches": 0,
+        "local_heap_fallbacks": 0,
+        "heap_peak_size": 211,
+        "frontier_peak_size": 0
+      },
+      "rfr_work": {
+        "settled_vertices": 145,
+        "relaxations": 2724,
+        "distance_updates": 493,
+        "global_order_operations": 0,
+        "local_resolution_operations": 180,
+        "band_splits": 18,
+        "safe_band_batches": 17,
+        "local_heap_fallbacks": 17,
+        "heap_peak_size": 0,
+        "frontier_peak_size": 96
+      },
+      "global_order_operations_avoided": 546,
+      "resolution_efficiency": 3.033333333333333,
+      "rfr_initial_policy": {
+        "mode": "high ambiguity -> local heap",
+        "band_width": 2.8404913456514236,
+        "residual_threshold": 0.08,
+        "local_scan_limit": 2,
+        "max_refinement_depth": 16
+      },
+      "rfr_final_policy": {
+        "mode": "high ambiguity -> local heap -> probe revised: hybrid/local exact",
+        "band_width": 1.562270240108283,
+        "residual_threshold": 0.08,
+        "local_scan_limit": 2,
+        "max_refinement_depth": 16
+      },
+      "rfr_probe_summary": {
+        "settled_vertices": 25,
+        "split_pressure": 0.5833333333333334,
+        "fallback_rate": 0.2,
+        "safe_batch_ratio": 0.4166666666666667,
+        "average_residual": 1.5115297195380748,
+        "average_cross_edge_risk": 0.16261306448343468,
+        "average_volatility": 1.0209090909090908
+      }
+    },
+    {
+      "family": "irregular weighted",
+      "seed": 1,
+      "correct": true,
+      "dijkstra_time_s": 0.00041879999480443075,
+      "rfr_time_s": 0.004320899999584071,
+      "time_ratio_rfr_over_dijkstra": 10.317335370555162,
+      "dijkstra_work": {
+        "settled_vertices": 120,
+        "relaxations": 2194,
+        "distance_updates": 259,
+        "global_order_operations": 520,
+        "local_resolution_operations": 0,
+        "band_splits": 0,
+        "safe_band_batches": 0,
+        "local_heap_fallbacks": 0,
+        "heap_peak_size": 186,
+        "frontier_peak_size": 0
+      },
+      "rfr_work": {
+        "settled_vertices": 145,
+        "relaxations": 2690,
+        "distance_updates": 456,
+        "global_order_operations": 0,
+        "local_resolution_operations": 181,
+        "band_splits": 18,
+        "safe_band_batches": 18,
+        "local_heap_fallbacks": 18,
+        "heap_peak_size": 0,
+        "frontier_peak_size": 98
+      },
+      "global_order_operations_avoided": 520,
+      "resolution_efficiency": 2.8729281767955803,
+      "rfr_initial_policy": {
+        "mode": "high ambiguity -> local heap",
+        "band_width": 2.7412256659910916,
+        "residual_threshold": 0.08,
+        "local_scan_limit": 2,
+        "max_refinement_depth": 16
+      },
+      "rfr_final_policy": {
+        "mode": "high ambiguity -> local heap -> probe revised: hybrid/local exact",
+        "band_width": 1.5076741162951006,
+        "residual_threshold": 0.08,
+        "local_scan_limit": 2,
+        "max_refinement_depth": 16
+      },
+      "rfr_probe_summary": {
+        "settled_vertices": 25,
+        "split_pressure": 0.5714285714285714,
+        "fallback_rate": 0.24,
+        "safe_batch_ratio": 0.42857142857142855,
+        "average_residual": 1.5360468859245258,
+        "average_cross_edge_risk": 0.21838301069699356,
+        "average_volatility": 1.0115830115830116
+      }
+    },
+    {
+      "family": "irregular weighted",
+      "seed": 2,
+      "correct": true,
+      "dijkstra_time_s": 0.0004043000008095987,
+      "rfr_time_s": 0.0045315000024857,
+      "time_ratio_rfr_over_dijkstra": 11.20826117588797,
+      "dijkstra_work": {
+        "settled_vertices": 120,
+        "relaxations": 2236,
+        "distance_updates": 246,
+        "global_order_operations": 494,
+        "local_resolution_operations": 0,
+        "band_splits": 0,
+        "safe_band_batches": 0,
+        "local_heap_fallbacks": 0,
+        "heap_peak_size": 185,
+        "frontier_peak_size": 0
+      },
+      "rfr_work": {
+        "settled_vertices": 151,
+        "relaxations": 2808,
+        "distance_updates": 455,
+        "global_order_operations": 0,
+        "local_resolution_operations": 186,
+        "band_splits": 17,
+        "safe_band_batches": 18,
+        "local_heap_fallbacks": 18,
+        "heap_peak_size": 0,
+        "frontier_peak_size": 100
+      },
+      "global_order_operations_avoided": 494,
+      "resolution_efficiency": 2.6559139784946235,
+      "rfr_initial_policy": {
+        "mode": "high ambiguity -> local heap",
+        "band_width": 2.5614149595809192,
+        "residual_threshold": 0.08,
+        "local_scan_limit": 2,
+        "max_refinement_depth": 16
+      },
+      "rfr_final_policy": {
+        "mode": "high ambiguity -> local heap -> probe revised: hybrid/local exact",
+        "band_width": 1.4087782277695058,
+        "residual_threshold": 0.08,
+        "local_scan_limit": 2,
+        "max_refinement_depth": 16
+      },
+      "rfr_probe_summary": {
+        "settled_vertices": 31,
+        "split_pressure": 0.5333333333333333,
+        "fallback_rate": 0.22580645161290322,
+        "safe_batch_ratio": 0.4666666666666667,
+        "average_residual": 1.486622630515296,
+        "average_cross_edge_risk": 0.192296854163872,
+        "average_volatility": 1.0128205128205128
+      }
+    }
+  ],
+  "summary": [
+    {
+      "family": "clustered basins",
+      "correct": true,
+      "median_time_ratio_rfr_over_dijkstra": 8.599014512207878,
+      "median_global_order_operations_avoided": 256,
+      "median_resolution_efficiency": 1.4143646408839778,
+      "median_rfr_local_resolution_operations": 181,
+      "median_dijkstra_global_order_operations": 256,
+      "median_rfr_frontier_peak_size": 15,
+      "median_dijkstra_heap_peak_size": 15
+    },
+    {
+      "family": "irregular weighted",
+      "correct": true,
+      "median_time_ratio_rfr_over_dijkstra": 10.317335370555162,
+      "median_global_order_operations_avoided": 520,
+      "median_resolution_efficiency": 2.8729281767955803,
+      "median_rfr_local_resolution_operations": 181,
+      "median_dijkstra_global_order_operations": 520,
+      "median_rfr_frontier_peak_size": 98,
+      "median_dijkstra_heap_peak_size": 186
+    },
+    {
+      "family": "random dense-ish",
+      "correct": true,
+      "median_time_ratio_rfr_over_dijkstra": 10.266406128209379,
+      "median_global_order_operations_avoided": 638,
+      "median_resolution_efficiency": 3.082125603864734,
+      "median_rfr_local_resolution_operations": 207,
+      "median_dijkstra_global_order_operations": 638,
+      "median_rfr_frontier_peak_size": 98,
+      "median_dijkstra_heap_peak_size": 232
+    },
+    {
+      "family": "road-like grid",
+      "correct": true,
+      "median_time_ratio_rfr_over_dijkstra": 5.671664770853223,
+      "median_global_order_operations_avoided": 754,
+      "median_resolution_efficiency": 1.778301886792453,
+      "median_rfr_local_resolution_operations": 424,
+      "median_dijkstra_global_order_operations": 754,
+      "median_rfr_frontier_peak_size": 18,
+      "median_dijkstra_heap_peak_size": 25
+    }
+  ]
+}
