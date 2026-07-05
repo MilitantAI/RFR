@@ -9,11 +9,15 @@ RFR replaces unconditional global priority-queue ordering with conservative band
 This repository contains the reference Python implementation, tests, benchmark artefacts, and the topographic routing simulator published with the whitepaper.
 
 **DOI:** [10.5281/zenodo.20329104](https://doi.org/10.5281/zenodo.20329104)  
-**Paper:** [RFR_WHITEPAPER.pdf](RFR_WHITEPAPER.pdf) | [LaTeX source](RFR_WHITEPAPER.tex)
+**Paper (v1.1):** [RFR_WHITEPAPER_v1.1.pdf](RFR_WHITEPAPER_v1.1.pdf) | [LaTeX source](RFR_WHITEPAPER_v1.1.tex) &nbsp;&middot;&nbsp; v1.0: [pdf](RFR_WHITEPAPER.pdf) | [tex](RFR_WHITEPAPER.tex)
 
 ## Status
 
-This is a research prototype (v1.0.0). It validates exactness against Dijkstra across tested graph families and exposes a work profile (safe batches, split pressure, local fallback, residual ambiguity). It does **not** claim universal wall-clock superiority over Dijkstra in Python.
+This is a research prototype (v1.1.0). It validates exactness against Dijkstra across tested graph families and exposes a work profile (safe batches, split pressure, local fallback, residual ambiguity).
+
+**New in v1.1 — invariant-band field solver.** For cost fields, band safety is provable from a static invariant (band width = minimum step cost), which removes all runtime safety checks; settling and relaxing whole bands as vectorized NumPy operations then converts the proven independence into wall-clock speed. On full-field solves it computes exact Dijkstra-identical distances **1.7x-5.5x faster than hand-written grid Dijkstra at 512^2-2048^2 points**, with the advantage growing with scale, reproduced across two independent environments (see [RESULTS.md](RESULTS.md) and whitepaper v1.1, Sections 5-6).
+
+Honest scoping: the general-graph implementation remains slower than Dijkstra on pre-built graphs; the v1.0 pure-Python spatial solver is the dependency-free exactness oracle, not the fast path; single point-to-point queries still favour A*; invariant-band gains start at roughly 10^5 points.
 
 The validated property:
 
@@ -53,6 +57,20 @@ Compare operational metrics (Dijkstra vs RFR v6):
 ```powershell
 python -m rfr.operational --instances 3 --repeats 5 --output results/operational_v6_latest.json
 ```
+
+## Invariant-band solver (v1.1)
+
+Requires NumPy (`pip install -e .[fast]`):
+
+```python
+from rfr import solve_invariant_band_field
+
+result = solve_invariant_band_field(1024, 1024, (0, 0), cost=my_cost_grid)
+result.value_at((1023, 1023))       # exact shortest-path cost
+result.extract_path((1023, 1023))   # one shortest path
+```
+
+Independent benchmark harness and recorded results: [independent_review/](independent_review/).
 
 ## Topographic routing demo
 
@@ -95,6 +113,7 @@ RESULTS.md           # recorded validation and benchmark notes
 | v4 | Short feedback probe before full propagation; policy revised from probe metrics |
 | v5 | Probe is the opening segment of the same exact traversal (no duplicate run) |
 | v6 | Hybrid indexed band frontier on structured graphs; v5 fallback on ambiguous graphs |
+| v1.1 invariant-band | Static-invariant band safety on cost fields; vectorized whole-band settle/relax (NumPy) |
 
 ## Expected outcomes by graph family
 

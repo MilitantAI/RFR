@@ -773,3 +773,86 @@ All MVPs preserve exactness against equivalent graph Dijkstra on their test case
 The MVPs are promising when the input is already a raster, image, occupancy grid, game map, or fixed-resolution field. In those cases, direct spatial propagation avoids materialising hundreds or thousands of directed graph edges and remains faster than graph-build-plus-Dijkstra in the recorded smoke run.
 
 The MVPs do not claim to beat Dijkstra when a graph is already built. The practical value is avoiding graph construction and keeping the model in the native spatial representation, where domain layers can be applied directly.
+
+
+# Invariant-Band Solver (v1.1)
+
+Recorded: 2026-07-05
+
+## Origin
+
+An independent adversarial review benchmarked the v1.0 spatial solver against
+grid-native baselines (plain array Dijkstra, A*) and found it 5-7x slower
+despite the sound no-materialisation architecture; the deficit was itemised as
+implementation overhead (per-edge closure dispatch, layer isinstance checks,
+tuple-keyed dicts, generator stencils). The same review produced the
+invariant-band corollary and the vectorized solver recorded here. Harness and
+raw results: independent_review/.
+
+## Correctness
+
+`rfr.invariant_band.solve_invariant_band_field` produced exact
+Dijkstra-identical distance fields at every benchmarked size, and passes the
+test suite (uniform, weighted, masked, multi-source, path extraction) against
+the v1.0 reference solver.
+
+## Wall-clock results
+
+Environment: CPython 3.10, NumPy, one CPU core, medians, fixed seeds.
+Cost model: step = resolution + cost[target], 4-neighbour stencil.
+
+| Grid | Weighted | Invariant-band (s) | Grid Dijkstra (s) | Speedup | vs v1.0 spatial |
+| ---: | --- | ---: | ---: | ---: | ---: |
+| 96^2 | no | 0.0048 | 0.0043 | 0.88x | 5.0x |
+| 96^2 | yes | 0.0065 | 0.0047 | 0.73x | 4.3x |
+| 512^2 | yes | 0.0863 | 0.1626 | 1.88x | 12.6x |
+| 1024^2 | yes | 0.2598 | 0.7228 | 2.78x | 23.6x |
+| 1024^2 | no | 0.1155 | 0.5617 | 4.86x | 44.8x |
+| 2048^2 | yes | 0.8586 | 3.2666 | 3.80x | - |
+
+## Grid-native baselines for the v1.0 spatial solver (same review)
+
+Ratios are v1.0 spatial time over baseline time (>1 = baseline faster).
+
+| Grid | Weighted | vs build+solve | vs grid Dijkstra | vs A* (single query) |
+| ---: | --- | ---: | ---: | ---: |
+| 32^2 | no | 0.71 | 5.11 | 3.79 |
+| 96^2 | no | 0.60 | 5.64 | 3.58 |
+| 96^2 | yes | 0.61 | 6.01 | 3.45 |
+| 256^2 | yes | 0.55 | 5.98 | 3.18 |
+| 512^2 | yes | 0.60 | 6.61 | 3.34 |
+
+Note: the v1.0 advantage over graph-materialisation workflows is real and
+grows to 40-45% at scale - stronger than the 28-31% recorded above at <=96^2.
+
+## Status
+
+```text
+exactness: validated (all solvers)
+work ontology: validated
+invariant-band wall-clock superiority vs grid Dijkstra: validated at >=~10^5 points
+general-graph wall-clock superiority: still not validated
+single-query workloads: A* remains superior
+next: GPU band kernels, compiled core, full-resolution DEM benchmarks
+```
+
+
+## Author-hardware reproduction
+
+Recorded: 2026-07-05. Windows, CPython, NumPy 1.26.4, 3 repeats, all
+correctness checks passed. Same harness (independent_review/bench2.py, paths
+generalised to resolve the repo root).
+
+| Grid | Weighted | Banded (s) | Grid Dijkstra (s) | RFR spatial (s) | Banded vs grid | Banded vs RFR |
+| ---: | --- | ---: | ---: | ---: | ---: | ---: |
+| 96^2 | no | 0.0076 | 0.0057 | 0.0263 | 0.74x | 3.4x |
+| 96^2 | yes | 0.0130 | 0.0058 | 0.0302 | 0.45x | 2.3x |
+| 512^2 | yes | 0.109 | 0.191 | 1.116 | 1.7x | 10.2x |
+| 1024^2 | yes | 0.302 | 0.817 | 6.425 | 2.7x | 21.2x |
+| 1024^2 | no | 0.138 | 0.754 | 5.313 | 5.5x | 38.4x |
+| 2048^2 | yes | 1.028 | 3.985 | 50.23 | 3.9x | 48.8x |
+
+Cross-environment agreement: identical crossover (below ~10^5 points),
+identical scaling shape, constants within expected OS/NumPy variance. The
+headline range across both environments is 1.7x-5.5x over grid Dijkstra and
+10x-49x over the v1.0 spatial solver.

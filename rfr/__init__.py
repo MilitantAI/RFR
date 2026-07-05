@@ -36,6 +36,13 @@ from .graphs import (
     make_irregular_weighted_graph,
     make_random_graph,
 )
+try:
+    from .invariant_band import InvariantBandResult, solve_invariant_band_field
+
+    _HAS_INVARIANT_BAND = True
+except ImportError:  # numpy not installed; rfr[fast] extra
+    _HAS_INVARIANT_BAND = False
+
 from .spatial import (
     FieldLayers,
     Stencil,
@@ -103,3 +110,6 @@ __all__ = [
     "spatial_differential",
     "von_neumann_neighbours",
 ]
+
+if _HAS_INVARIANT_BAND:
+    __all__ += ["InvariantBandResult", "solve_invariant_band_field"]
