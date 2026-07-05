@@ -1,6 +1,6 @@
 # Residual Frontier Refinement (RFR)
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20329104.svg)](https://doi.org/10.5281/zenodo.20329104)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21206454.svg)](https://doi.org/10.5281/zenodo.21206454)
 
 Exact shortest-path propagation with adaptive partial ordering over residual distance bands.
 
@@ -8,7 +8,8 @@ RFR replaces unconditional global priority-queue ordering with conservative band
 
 This repository contains the reference Python implementation, tests, benchmark artefacts, and the topographic routing simulator published with the whitepaper.
 
-**DOI:** [10.5281/zenodo.20329104](https://doi.org/10.5281/zenodo.20329104)  
+**DOI (v1.1.0):** [10.5281/zenodo.21206454](https://doi.org/10.5281/zenodo.21206454)  
+**Concept DOI:** [10.5281/zenodo.20329104](https://doi.org/10.5281/zenodo.20329104)  
 **Paper (v1.1):** [RFR_WHITEPAPER_v1.1.pdf](RFR_WHITEPAPER_v1.1.pdf) | [LaTeX source](RFR_WHITEPAPER_v1.1.tex) &nbsp;&middot;&nbsp; v1.0: [pdf](RFR_WHITEPAPER.pdf) | [tex](RFR_WHITEPAPER.tex)
 
 ## Status
@@ -134,14 +135,15 @@ If you use this work, please cite the Zenodo record:
   title        = {Residual Frontier Refinement: Exact Shortest-Path Propagation with Adaptive Partial Ordering},
   year         = {2026},
   publisher    = {Zenodo},
-  doi          = {10.5281/zenodo.20329104},
-  url          = {https://doi.org/10.5281/zenodo.20329104}
+  version      = {1.1.0},
+  doi          = {10.5281/zenodo.21206454},
+  url          = {https://doi.org/10.5281/zenodo.21206454}
 }
 ```
 
 ## License
 
-[Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/), matching the [Zenodo release](https://doi.org/10.5281/zenodo.20329104).
+[Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/), matching the [Zenodo release](https://doi.org/10.5281/zenodo.21206454).
 
 ## Author
 
