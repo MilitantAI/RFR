@@ -356,7 +356,7 @@ for all reachable vertices in each test instance.
 
 Early smoke benchmarks showed exactness and useful work decomposition. Table~\ref{tab:smoke} summarises representative v4 results from generated graph families.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \begin{tabular}{lrrrr}
 \toprule
@@ -376,7 +376,7 @@ Irregular weighted & true & 498 & 12 & 10 \\
 
 Operational benchmarking compares Python wall-clock time against \Dijkstra{} on pre-built graph families. The current Python implementation is slower than \Dijkstra{} in all tested graph-family runs. Table~\ref{tab:operational} summarises median v6 hybrid observations.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \begin{tabular}{lrrr}
 \toprule
@@ -399,7 +399,7 @@ The interpretation is deliberately conservative. \RFR{} avoids global ordering o
 
 Independent adversarial benchmarking (harness included in the artefacts) compared the v1.0 spatial solver against the baselines practitioners actually deploy on fields: a plain array-based grid \Dijkstra{} that never materialises a graph, and A* with a Manhattan heuristic for single queries. All methods produced identical distances. Ratios are v1.0 spatial time over baseline time (medians; $>1$ means the baseline is faster).
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \begin{tabular}{lrrrr}
 \toprule
@@ -421,7 +421,7 @@ $512^2$ & yes & 0.60 & 6.61 & 3.34 \\
 
 The invariant-band solver of Section~\ref{sec:invariant} was benchmarked on the same fields, seeds, and cost model (CPython 3.10, NumPy, one CPU core; medians; distance-field equality verified against \Dijkstra{} at every size).
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \begin{tabular}{lrrrrr}
 \toprule
@@ -447,7 +447,7 @@ This is the empirical form of the paper's thesis: ordering work that a static in
 
 The TopographicMaps simulator applies terrain Dijkstra and terrain \RFR{} to Digital Elevation Model rasters. It compares target discovery work rather than full-map post-target exploration. In the current eight-sample public DEM set, the median target-work reduction is approximately $49.19\%$, with observed savings between $48.57\%$ and $49.58\%$.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \begin{tabular}{lrrr}
 \toprule
