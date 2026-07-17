@@ -313,6 +313,12 @@ class ResidualFrontier:
         for node, distance in band.members.items():
             for neighbour, weight in self.graph.get(node, []):
                 if neighbour in band.members:
+                    # Internal closure: a within-band edge that can still lower
+                    # its target means members are causally linked and must not
+                    # be finalised together. (Lean-checker condition; omitting
+                    # this admitted stale settlements via in-band chains.)
+                    if band.members[neighbour] > distance + weight:
+                        return False
                     continue
                 if distance + weight < band_max:
                     return False
@@ -597,6 +603,9 @@ class IndexedResidualFrontier:
         for node, distance in band.members.items():
             for neighbour, weight in self.graph.get(node, []):
                 if neighbour in band.members:
+                    # Internal closure (see ResidualFrontier._is_safe).
+                    if band.members[neighbour] > distance + weight:
+                        return False
                     continue
                 if distance + weight < band_max:
                     return False

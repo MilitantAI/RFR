@@ -9,13 +9,11 @@ authors:
     email: mpetrik@militant.ai
 identifiers:
   - type: doi
-    value: 10.5281/zenodo.21206454
-  - type: doi
     value: 10.5281/zenodo.20329104
 repository-code: "https://github.com/MilitantAI/RFR"
 license: CC-BY-4.0
-version: 1.1.0
-date-released: 2026-07-05
+version: 1.1.1
+date-released: 2026-07-17
 keywords:
   - shortest-path algorithms
   - pathfinding

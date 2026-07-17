@@ -1,0 +1,692 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  citecolor=blue!60!black,
+  urlcolor=blue!60!black
+}
+
+\newcommand{\RFR}{\textsc{RFR}}
+\newcommand{\Dijkstra}{\textsc{Dijkstra}}
+\newcommand{\dist}{\operatorname{dist}}
+\newcommand{\frontier}{\mathcal{F}}
+\newcommand{\band}{\mathcal{B}}
+\newcommand{\vertices}{V}
+\newcommand{\edges}{E}
+\newcommand{\reals}{\mathbb{R}}
+
+\title{Residual Frontier Refinement: Exact Shortest-Path Propagation with Adaptive Partial Ordering}
+\author{
+  Morgan Petrik\\
+  Militant.AI\\
+  \texttt{mpetrik@militant.ai}\\[0.75em]
+  Version 1.1.1\\[0.25em]
+  DOI (v1.1.1): \href{https://doi.org/10.5281/zenodo.21403659}{10.5281/zenodo.21403659}\\
+  Concept DOI: \href{https://doi.org/10.5281/zenodo.20329104}{10.5281/zenodo.20329104}
+}
+\date{17 July 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Shortest-path solvers based on global priority queues impose a total order on the active frontier. This ordering is sufficient for exact propagation, but it is often stronger than necessary on structured graph and spatial routing problems. Residual Frontier Refinement (\RFR{}) is an exact single-source shortest-path method that replaces global heap ordering with adaptive partial ordering over distance bands. A band is processed as a batch only when conservative safety checks prove that no unprocessed candidate can invalidate the propagation order. Ambiguous bands are split or resolved by a local exact fallback.
+
+This whitepaper formalises the \RFR{} algorithm, describes its safety invariant, defines its work model, and reports empirical observations from generated graph families and topographic routing demos. The current implementation validates exactness against \Dijkstra{} across tested graph families. It also demonstrates that structured frontiers can avoid global ordering operations and expose useful diagnostic information about frontier ambiguity. Version 1.1 adds an invariant-band execution model for cost fields: when the band width does not exceed the minimum possible step cost, every band is unconditionally safe, eliminating runtime safety checks entirely; settling and relaxing whole bands as vectorized array operations then converts the proven independence into wall-clock performance. The invariant-band solver computes exact \Dijkstra{}-identical distance fields $1.7\times$--$5.5\times$ faster than a hand-written array-based grid \Dijkstra{} at $512^2$--$2048^2$ points, with the advantage growing with scale, reproduced across two independent environments. The general-graph implementation remains slower than \Dijkstra{} on pre-built graphs, and single-query workloads still favour A*; these limits are stated explicitly.
+\end{abstract}
+
+\section{Contributions}
+
+This whitepaper makes four contributions:
+
+\begin{enumerate}
+  \item It defines Residual Frontier Refinement as an exact shortest-path propagation method based on adaptive partial ordering.
+  \item It gives the conservative safety condition used to decide when a frontier band may be batch-processed.
+  \item It separates global heap-ordering work from local residual-resolution work, giving a clearer account of what the algorithm changes.
+  \item It reports the empirical and operational status: exactness is validated across tested graph families, work-shape benefits are visible, and wall-clock superiority is established for the invariant-band field solver but not for the general-graph implementation.
+  \item (v1.1) It introduces the invariant-band corollary --- bands no wider than the minimum edge weight are unconditionally safe --- and demonstrates that executing such bands as vectorized batches yields measured wall-clock superiority over grid-native \Dijkstra{} baselines on cost fields ($1.7\times$--$5.5\times$ at $512^2$--$2048^2$ points, Section~\ref{sec:invariantresults}).
+\end{enumerate}
+
+\section{Problem Statement}
+\label{sec:problem}
+
+Let $G=(\vertices,\edges,w)$ be a directed graph with non-negative edge weights $w(u,v)\ge 0$, source $s\in \vertices$, and shortest-path distances
+\[
+  d^\star(v)=\min_{p:s\leadsto v}\sum_{(u,z)\in p} w(u,z).
+\]
+The single-source shortest-path problem computes $d^\star(v)$ for all reachable vertices and may also record predecessors for path reconstruction.
+
+\Dijkstra{}'s algorithm \cite{dijkstra1959} solves this problem by repeatedly extracting the globally minimum unsettled frontier element. The global minimum rule is exact, but it enforces a total order over the frontier. On structured graphs, many frontier vertices may be provably safe to process together, or safe to resolve using only local ordering, because their relative order cannot change the final distances. The core \RFR{} hypothesis is:
+
+\begin{quote}
+Shortest-path propagation requires enough ordering to preserve correctness, not necessarily complete global ordering at every step.
+\end{quote}
+
+\RFR{} tests this hypothesis by replacing the global heap with distance bands, conservative residual checks, splitting, and local fallback.
+
+\section{Algorithm Overview}
+\label{sec:algorithm}
+
+\subsection{Residual Frontier}
+
+\RFR{} maintains a frontier $\frontier$ partitioned into bands. Each band $\band$ has:
+
+\begin{itemize}
+  \item a lower and upper distance bound $[\ell(\band), u(\band))$,
+  \item a set of active members $\{(v, \hat d(v))\}$,
+  \item update counts and refinement depth,
+  \item residual diagnostics measuring internal width, volatility, cross-edge risk, and degree risk.
+\end{itemize}
+
+The implementation records the following residual components for a band:
+
+\[
+  R(\band)=R_{\text{width}}(\band)+R_{\text{volatility}}(\band)+R_{\text{cross}}(\band)+R_{\text{degree}}(\band).
+\]
+
+These residuals are not trusted as correctness criteria by themselves. They guide splitting and local fallback. Exactness depends on the conservative safety rules in Section~\ref{sec:safety}.
+
+\subsection{High-Level Procedure}
+
+\begin{verbatim}
+ResidualFrontierSSSP(G, s):
+    dist[v] <- infinity for all v
+    dist[s] <- 0
+    frontier.insert_or_update(s, 0)
+
+    while frontier is not empty:
+        B <- lowest non-empty distance band
+
+        if Safe(B, frontier, dist, G):
+            batch <- all members of B sorted locally by tentative distance
+            remove B from frontier
+        else:
+            residual <- measure residual pressure in B
+            if residual exceeds threshold and B can be refined:
+                split B into smaller bands
+                continue
+            else:
+                batch <- one local exact minimum from B
+
+        for (u, du) in batch:
+            if u is stale or settled:
+                continue
+            settle u
+            for each outgoing edge (u, v, w):
+                candidate <- du + w
+                if candidate < dist[v]:
+                    dist[v] <- candidate
+                    predecessor[v] <- u
+                    if v is unsettled:
+                        frontier.insert_or_update(v, candidate)
+\end{verbatim}
+
+\subsection{Safe Batch Extraction}
+\label{sec:safety}
+
+Let $\band$ be the lowest non-empty band in the frontier. Let
+\[
+  d_{\max}(\band)=\max_{v\in \band} \hat d(v)
+\]
+and let
+\[
+  d_{\min}(\frontier\setminus \band)=\min_{v\in \frontier\setminus \band} \hat d(v),
+\]
+with $d_{\min}=\infty$ if no outside frontier elements exist.
+
+\RFR{} first requires:
+\[
+  d_{\max}(\band) \le d_{\min}(\frontier\setminus \band).
+\]
+This ensures no already-known outside frontier element precedes the band.
+
+The implementation also checks whether relaxing a member of $\band$ could create an outside candidate that should precede remaining band members. For each $u\in\band$ and outgoing edge $(u,v)$ with $v\notin\band$, the safety check rejects the batch if:
+\[
+  \hat d(u)+w(u,v) < d_{\max}(\band).
+\]
+If this condition occurs, processing the whole band could skip an outside candidate that should be interleaved before later band members. The band is then unsafe and must be split or resolved locally.
+
+\paragraph{Internal closure (added in v1.1.1).}
+The two checks above constrain only \emph{outside} candidates. They do not
+constrain causal chains that run entirely \emph{within} the band. For each
+$u\in\band$ and outgoing edge $(u,v)$ with $v\in\band$, the safety check
+must also reject the batch unless:
+\[
+  \hat d(v) \le \hat d(u) + w(u,v).
+\]
+If any within-band edge can still lower its target, the band members are
+causally linked: settling them together can finalise a member at a stale
+label even though the improving chain lies entirely inside the batch. Such a
+band is unsafe and must be split or resolved locally. Versions prior to
+1.1.1 omitted this condition; Section~\ref{sec:erratum} documents the
+resulting counterexample and its discovery by a machine-checked
+implementation of the safety relation.
+
+\subsection{Unsafe Bands}
+
+Unsafe bands represent frontier ambiguity. \RFR{} responds in two ways:
+
+\begin{enumerate}
+  \item \textbf{Split:} If the band has multiple members and has not exceeded the maximum refinement depth, it is split into narrower bands.
+  \item \textbf{Local exact fallback:} If splitting is no longer useful or allowed, the algorithm extracts the exact local minimum from the band.
+\end{enumerate}
+
+The local fallback is not a correctness failure. It is a controlled reversion to exact ordering where partial ordering is insufficient.
+
+\subsection{Compositional Design}
+
+\RFR{} is intentionally decomposed into small, independently inspectable parts:
+
+\begin{itemize}
+  \item \textbf{Safety predicates} decide whether a frontier band can be processed without violating exactness.
+  \item \textbf{Band transformations} insert, update, split, and remove frontier regions without settling vertices.
+  \item \textbf{Residual measurements} describe ambiguity pressure but do not replace the safety predicates.
+  \item \textbf{Local fallback} provides controlled recovery to exact local ordering when partial ordering is insufficient.
+\end{itemize}
+
+This separation is operationally important. A conventional global priority queue hides most ordering pressure inside heap operations. \RFR{} exposes that pressure as data: a band was safe, unsafe, split, locally resolved, or accepted as a batch. The result is not only a distance field, but also a diagnostic trace of where the problem required precision.
+
+\section{Correctness Argument}
+\label{sec:correctness}
+
+\subsection{Invariant}
+
+\RFR{} maintains the standard label-setting invariant \cite{cormen2009}:
+
+\begin{quote}
+When a vertex $u$ is settled, its tentative distance $\hat d(u)$ equals the true shortest-path distance $d^\star(u)$.
+\end{quote}
+
+\Dijkstra{} enforces this invariant by extracting the global minimum unsettled label. \RFR{} enforces it by proving that either a full band is safe, or by falling back to an exact local minimum within an unsafe band.
+
+\subsection{Safe Band Lemma}
+
+\textbf{Lemma.} If a band $\band$ passes the three safety checks in Section~\ref{sec:safety} (outside precedence, outside candidate creation, and internal closure), then settling the members of $\band$ in nondecreasing tentative-distance order preserves the label-setting invariant.
+
+\textbf{Sketch.} The first safety check ensures that no known outside frontier vertex has a smaller tentative distance than any member of $\band$. The second safety check ensures that relaxing any band member cannot create an outside candidate whose distance is smaller than the maximum remaining distance within the band. The third check (internal closure) ensures that no within-band edge can improve any band member: the current labels are already a fixed point of relaxation restricted to the band. Together these imply that no candidate --- outside or inside --- can lower any member's label after finalisation, so the tentative labels equal the true distances and each settled vertex has the globally minimal necessary label at its settlement point. The v1.1.0 sketch argued only the first two conditions and incorrectly concluded exactness; internal closure is necessary, as the counterexample in Section~\ref{sec:erratum} shows.
+
+\subsection{Unsafe Band Lemma}
+
+\textbf{Lemma.} If a band is unsafe, splitting or extracting a local exact minimum preserves the possibility of exact label-setting propagation.
+
+\textbf{Sketch.} Splitting does not settle any vertex; it only refines the frontier partition. It therefore cannot invalidate distances. Local exact fallback extracts the minimum label inside the current lowest band. Since the band is the lowest non-empty band by lower bound, and exact local extraction is used when batch safety is unavailable, this step conservatively approximates \Dijkstra{}'s global-minimum behaviour within the ambiguous region. Stale entries are ignored, and relaxations are accepted only when they improve labels.
+
+\subsection{Theorem}
+
+\textbf{Theorem.} For graphs with non-negative edge weights, \RFR{} computes the same shortest-path distances as \Dijkstra{}, assuming the safety checks and stale-entry rules described above.
+
+\textbf{Sketch.} By induction over settled vertices. The source is settled with distance zero. At each step, either a safe band is processed under the Safe Band Lemma or an unsafe band is refined/resolved under the Unsafe Band Lemma. Relaxation is identical to \Dijkstra{} once a vertex is selected. Since no settled vertex violates the label-setting invariant, all reachable final distances match $d^\star$. Unreachable vertices remain at infinity.
+
+\subsection{Invariant Band Corollary}
+\label{sec:invariantcorollary}
+
+\textbf{Corollary.} Let $w_{\min}=\min_{(u,v)\in\edges} w(u,v)>0$. If every band satisfies $u(\band)-\ell(\band)\le w_{\min}$, and the lowest non-empty band is always processed first, then every band passes both safety checks of Section~\ref{sec:safety} unconditionally.
+
+\textbf{Proof.} Because bands partition distances by fixed key and the lowest non-empty band is processed first, every outside frontier member lies in a higher band, so $d_{\min}(\frontier\setminus\band)\ge u(\band)>d_{\max}(\band)$, satisfying the first check. For the second check, any candidate created by relaxing $u\in\band$ has value $\hat d(u)+w(u,v)\ge \ell(\band)+w_{\min}\ge \ell(\band)+\bigl(u(\band)-\ell(\band)\bigr)=u(\band)>d_{\max}(\band)$. No relaxation can produce a candidate that precedes any remaining band member. $\square$
+
+The consequence is architectural: for problem classes where $w_{\min}$ is known \emph{statically} --- in particular cost fields, where the minimum differential is the grid resolution plus the minimum cell increment --- band safety requires no runtime inspection at all. The safety proof is purchased once, from the invariant, instead of per-band at retail. Section~\ref{sec:invariant} develops this into an execution model. This corollary also locates \RFR{} precisely in the bucket lineage: it is Dial's condition \cite{dial1969} generalised to real weights, and delta-stepping \cite{meyer2003} with $\Delta=w_{\min}$, where minimum-weight edges are light, heavier edges cross bucket boundaries in one outer pass, and bucket width coincides with the static invariant.
+
+\section{Work Model}
+\label{sec:work}
+
+\RFR{} separates two forms of work that are conflated in ordinary priority-queue shortest-path implementations.
+
+\subsection{Dijkstra Work}
+
+The baseline global ordering work is:
+\[
+  W_{\text{global}} = H_{\text{push}} + H_{\text{pop}},
+\]
+where $H_{\text{push}}$ and $H_{\text{pop}}$ are heap insertions and heap removals. The implementation records these as \texttt{global\_heap\_pushes} and \texttt{global\_heap\_pops}.
+
+\subsection{RFR Work}
+
+\RFR{} records local resolution work:
+\[
+  W_{\text{local}} =
+  S_{\text{band}} +
+  R_{\text{local}} +
+  F_{\text{heap}} +
+  I_{\text{heap}},
+\]
+where $S_{\text{band}}$ is band scan work, $R_{\text{local}}$ is local refinement count, $F_{\text{heap}}$ is local heap fallback count, and $I_{\text{heap}}$ is the number of items resolved by local fallback.
+
+The implementation also records safe batches, band splits, frontier peak size, stale entries, relaxations, distance updates, and batch vertices.
+
+\subsection{Resolution Efficiency}
+
+The project uses a diagnostic ratio:
+\[
+  E = \frac{W_{\text{global avoided}}}{W_{\text{local}}}.
+\]
+Values above one indicate that \RFR{} avoided more global heap-ordering operations than it added in local resolution work. This is a work-shape metric, not a direct wall-clock claim.
+
+\section{Adaptive Policies}
+\label{sec:adaptive}
+
+\subsection{Static Graph Classification}
+
+The implementation computes graph features:
+
+\begin{itemize}
+  \item vertex and edge counts,
+  \item density,
+  \item average degree,
+  \item clustering,
+  \item edge-weight mean and variance.
+\end{itemize}
+
+These features select an initial frontier policy:
+
+\begin{center}
+\begin{tabular}{p{0.33\linewidth}p{0.52\linewidth}}
+\toprule
+Graph signal & Policy response \\
+\midrule
+Road-like geometry & broad directional bands, larger scan limit \\
+Cluster structure & basin-first propagation, moderate bands \\
+High ambiguity & narrow bands and local heap fallback \\
+Low ambiguity & broad bands with moderate residual threshold \\
+Medium ambiguity & split-oriented hybrid bands \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Probe Revision}
+
+RFR v4 introduced a probe phase:
+\[
+  \text{graph features} \rightarrow \text{initial policy}
+  \rightarrow \text{frontier probe}
+  \rightarrow \text{revised policy}.
+\]
+
+The probe observes split pressure, fallback rate, safe-batch ratio, residual size, cross-edge risk, and volatility. RFR v5 removes duplicate traversal by making the probe the opening segment of the exact run; the policy is revised in place and propagation continues.
+
+\subsection{Hybrid Indexed Frontier}
+
+RFR v6 adds a hybrid frontier:
+\[
+  \begin{cases}
+    \text{indexed residual frontier}, & \text{structured policies},\\
+    \text{split-capable v5 frontier}, & \text{ambiguous policies}.
+  \end{cases}
+\]
+
+The indexed frontier computes band placement directly from the priority and caches band extrema. It helps road-like cases but is not a universal improvement. Random and irregular graphs need split-capable behaviour, so the hybrid avoids applying the indexed structure where it is a poor fit.
+
+\section{Invariant-Band Execution on Cost Fields}
+\label{sec:invariant}
+
+The corollary of Section~\ref{sec:invariantcorollary} removes the safety-checking cost, but proven band independence must still be \emph{spent} on something. Sequential execution spends it on nothing: a batch processed one element at a time is indistinguishable from heap extraction. The v1.1 solver spends it on data parallelism.
+
+\subsection{Execution Model}
+
+For a $W\times H$ cost field with resolution $r$ and cell costs $c\ge 0$, set the static band width $\delta = r + \min c$. Distances, settlement flags, and cell costs live in flat arrays indexed by $y\cdot W+x$. Nodes are filed into band buckets keyed by $\lfloor \hat d/\delta\rfloor$ at update time, with lazy deletion. Processing the lowest non-empty bucket settles all live members at once and relaxes each stencil direction as a single whole-array operation:
+
+\begin{verbatim}
+InvariantBandField(W, H, cost, r):
+    delta <- r + min(cost)            # static safety invariant
+    dist[*] <- infinity; dist[source] <- 0
+    file source in bucket[0]
+    k <- 0
+    while buckets remain:
+        B <- unique live members of bucket[k]   # lazy deletion
+        settle all of B                          # unconditionally safe
+        for each stencil direction d:            # 4 vectorized ops
+            T <- neighbours of B in direction d
+            cand <- dist[B] + step_cost[T]
+            improved <- cand < dist[T]
+            dist[T[improved]] <- cand[improved]
+            file T[improved] in bucket[floor(cand/delta)]
+        k <- k + 1
+\end{verbatim}
+
+Exactness follows directly from the corollary; the implementation (about fifty lines of NumPy) validates distance-field equality against \Dijkstra{} at every benchmarked size. Total element work is $O(N)$ with array-operation constants; ordering overhead is $O(d_{\max}/\delta)$ bucket steps, i.e.\ proportional to field diameter rather than to $N\log N$ heap traffic.
+
+\subsection{What Changed Relative to v1.0}
+
+The v1.0 spatial solver (Section~\ref{sec:applications}) already avoided graph materialisation but executed sequentially with per-edge function dispatch, per-point tuple keys, and per-lookup layer dispatch. Those costs made it $5$--$7\times$ slower than a plain array-based grid \Dijkstra{} despite the sound architecture (Section~\ref{sec:gridnative}). The v1.1 solver keeps the thesis and deletes the overhead: safety by invariant instead of inspection, batches spent as array parallelism instead of sequential loops, flat arrays instead of hashed points.
+
+\section{Empirical Evidence}
+\label{sec:empirical}
+
+\subsection{Correctness Tests}
+
+The test suite validates equality with \Dijkstra{} on hand-built graphs, generated road-like grids, clustered graphs, random graphs, irregular weighted graphs, unreachable vertices, and adaptive variants v3 through v6. The core tested condition is:
+\[
+  d_{\RFR}(v)=d_{\Dijkstra}(v)
+\]
+for all reachable vertices in each test instance.
+
+\subsection{Benchmark Smoke Results}
+
+Early smoke benchmarks showed exactness and useful work decomposition. Table~\ref{tab:smoke} summarises representative v4 results from generated graph families.
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+Family & Correct & Global order avoided & Safe batches & Band splits \\
+\midrule
+Road-like grid & true & 754 & 37 & 1 \\
+Clustered basins & true & 256 & 17 & 0 \\
+Random dense-ish & true & 584 & 22 & 16 \\
+Irregular weighted & true & 498 & 12 & 10 \\
+\bottomrule
+\end{tabular}
+\caption{Representative feedback-driven \RFR{} smoke results. Structured cases allow many safe batches; ambiguous cases require more splitting.}
+\label{tab:smoke}
+\end{table}
+
+\subsection{Operational Graph Results}
+
+Operational benchmarking compares Python wall-clock time against \Dijkstra{} on pre-built graph families. The current Python implementation is slower than \Dijkstra{} in all tested graph-family runs. Table~\ref{tab:operational} summarises median v6 hybrid observations.
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lrrr}
+\toprule
+Family & Time ratio & Efficiency & Safe batches \\
+\midrule
+Road-like grid & 4.85 & 1.89 & 37 \\
+Clustered basins & 7.90 & 1.77 & 17 \\
+Random dense-ish & 9.09 & 3.91 & 24 \\
+Irregular weighted & 8.80 & 3.61 & 12 \\
+\bottomrule
+\end{tabular}
+\caption{Median operational results for the v6 hybrid frontier. All listed families were correct against \Dijkstra{}. Exactness and work-shape improvements are validated; wall-clock superiority is not validated in this Python implementation.}
+\label{tab:operational}
+\end{table}
+
+The interpretation is deliberately conservative. \RFR{} avoids global ordering operations and exposes frontier ambiguity, but Python-level frontier machinery, safe-band scans, and local sorting dominate runtime for the current implementation.
+
+\subsection{Grid-Native Baselines for the v1.0 Spatial Solver}
+\label{sec:gridnative}
+
+Independent adversarial benchmarking (harness included in the artefacts) compared the v1.0 spatial solver against the baselines practitioners actually deploy on fields: a plain array-based grid \Dijkstra{} that never materialises a graph, and A* with a Manhattan heuristic for single queries. All methods produced identical distances. Ratios are v1.0 spatial time over baseline time (medians; $>1$ means the baseline is faster).
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+Grid & Weighted & vs.\ build$+$solve & vs.\ grid \Dijkstra{} & vs.\ A* (single query) \\
+\midrule
+$32^2$  & no  & 0.71 & 5.11 & 3.79 \\
+$96^2$  & no  & 0.60 & 5.64 & 3.58 \\
+$96^2$  & yes & 0.61 & 6.01 & 3.45 \\
+$256^2$ & yes & 0.55 & 5.98 & 3.18 \\
+$512^2$ & yes & 0.60 & 6.61 & 3.34 \\
+\bottomrule
+\end{tabular}
+\caption{v1.0 spatial solver against practitioner baselines. The advantage over graph-materialisation workflows is real and grows to $40$--$45\%$ at scale (first column), but grid-native implementations that also skip materialisation are $5$--$7\times$ faster than the v1.0 solver. The deficit is implementation overhead, not algorithmic: per-edge closure dispatch, per-lookup layer dispatch, and hashed point keys.}
+\label{tab:gridnative}
+\end{table}
+
+\subsection{Invariant-Band Wall-Clock Results}
+\label{sec:invariantresults}
+
+The invariant-band solver of Section~\ref{sec:invariant} was benchmarked on the same fields, seeds, and cost model (CPython 3.10, NumPy, one CPU core; medians; distance-field equality verified against \Dijkstra{} at every size).
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lrrrrr}
+\toprule
+Grid & Weighted & Invariant-band (s) & Grid \Dijkstra{} (s) & Speedup & vs.\ v1.0 spatial \\
+\midrule
+$96^2$   & no  & 0.0048 & 0.0043 & $0.88\times$ & $5.0\times$ \\
+$96^2$   & yes & 0.0065 & 0.0047 & $0.73\times$ & $4.3\times$ \\
+$512^2$  & yes & 0.0863 & 0.1626 & $1.88\times$ & $12.6\times$ \\
+$1024^2$ & yes & 0.2598 & 0.7228 & $2.78\times$ & $23.6\times$ \\
+$1024^2$ & no  & 0.1155 & 0.5617 & $4.86\times$ & $44.8\times$ \\
+$2048^2$ & yes & 0.8586 & 3.2666 & $3.80\times$ & --- \\
+\bottomrule
+\end{tabular}
+\caption{Invariant-band solver wall-clock results. Below roughly $10^5$ points, per-band array-operation overhead dominates and the plain grid \Dijkstra{} remains competitive; above it, the invariant-band solver wins and the advantage grows with scale, consistent with $O(N)$ element work against heap traffic. All results are exact.}
+\label{tab:invariantresults}
+\end{table}
+
+The results were independently reproduced on the author's hardware (Windows, CPython, NumPy 1.26; medians of three repeats; all correctness checks passed): $1.7\times$, $2.7\times$, and $3.9\times$ over grid \Dijkstra{} at $512^2$, $1024^2$, and $2048^2$ weighted respectively, $5.5\times$ at $1024^2$ unweighted, with the same crossover below roughly $10^5$ points. Across both environments the invariant-band solver is $10\times$--$49\times$ faster than the v1.0 spatial solver.
+
+This is the empirical form of the paper's thesis: ordering work that a static invariant proves unnecessary can be discarded, and when the resulting independence is executed as batch parallelism rather than sequentially, discarding it is not merely exact but faster.
+
+\subsection{Topographic Routing Case Study}
+
+The TopographicMaps simulator applies terrain Dijkstra and terrain \RFR{} to Digital Elevation Model rasters. It compares target discovery work rather than full-map post-target exploration. In the current eight-sample public DEM set, the median target-work reduction is approximately $49.19\%$, with observed savings between $48.57\%$ and $49.58\%$.
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lrrr}
+\toprule
+DEM & Dijkstra target work & RFR target work & Work saved \\
+\midrule
+o41078a5 & 2386 & 1203 & 49.6\% \\
+o41078a1 & 2525 & 1286 & 49.1\% \\
+o41078a2 & 2475 & 1273 & 48.6\% \\
+o41078a3 & 2453 & 1249 & 49.1\% \\
+o41078a4 & 2367 & 1200 & 49.3\% \\
+o41078a6 & 2406 & 1213 & 49.6\% \\
+o41078a7 & 2424 & 1240 & 48.8\% \\
+i30dem & 2048 & 1035 & 49.5\% \\
+\bottomrule
+\end{tabular}
+\caption{Topographic target-discovery work in the simulator. The metric compares global heap-order work for terrain \Dijkstra{} against local band-resolution work for terrain \RFR{}.}
+\label{tab:topographic}
+\end{table}
+
+This case study supports the visual and diagnostic value of the method. It should not be read as a universal timing result because the simulator compares work units and because implementation details affect wall-clock performance.
+
+\section{Operational Applications and Implications}
+\label{sec:applications}
+
+\RFR{} is not only an alternative implementation of shortest paths. Its residual frontier model creates practical leverage in domains where the map is structured, where the frontier is interpretable, or where costs change over time. The most important applications are those where the graph is implicit or expensive to materialise, and where a solver must be integrated into a larger operational system rather than run as an isolated benchmark.
+
+\subsection{Direct Operation on Maps, Grids, and Rasters}
+
+Many real pathing domains begin as maps rather than abstract graphs: game tiles, navmesh regions, occupancy grids, terrain rasters, heatmaps, and GIS layers. A graph can be materialised from these structures, but doing so introduces construction cost, memory overhead, and another representation boundary. The spatial components of this project show the practical value of treating each point as a local evaluator:
+\[
+  value(p)=\min_{q\in N(p)} value(q)+\Delta(q,p,\text{layers}).
+\]
+
+In that setting, \RFR{}'s band and residual model can operate over structured frontier regions rather than over an arbitrary heap of graph vertices. This does not remove the need for a correctness-preserving ordering rule, but it aligns the ordering mechanism with the native structure of maps and rasters.
+
+\subsection{Games and Structured Level Pathfinding}
+
+Games commonly exploit structure through grids, navmeshes, hierarchical abstraction, and clustered regions. \RFR{} is complementary to these practices. On a structured level, broad coherent bands may correspond to corridors, basins, rooms, road-like lanes, or terrain-cost contours. Safe-batch ratios, split pressure, and fallback rates can expose whether the level geometry is producing coherent pathing frontiers or chaotic ordering pressure.
+
+That diagnostic value is useful during development. A designer or tools engineer can ask not only ``what path was selected?'' but also ``where did the frontier become ambiguous?'' and ``which regions forced exact local ordering?'' This makes \RFR{} a potential development instrument even where another production solver remains the runtime default.
+
+\subsection{Dynamic Repathing}
+
+\RFR{} is not yet an incremental shortest-path algorithm in the sense of D* Lite \cite{koenig2002}. However, its architecture points naturally toward local repair. Dynamic map changes usually affect a region of the frontier, not the entire metric space. Because \RFR{} already represents the frontier as bands with residual pressure, updates could invalidate or refine only the affected bands, then resume propagation from the disturbed region.
+
+This is a future-work direction rather than a validated claim. The important architectural point is that \RFR{} separates the frontier into inspectable, transformable units. That is more amenable to local repair than an opaque global heap whose ordering state is meaningful only as a single total order.
+
+\subsection{Topographic and Terrain-Aware Routing}
+
+Terrain routing for drones, outdoor robotics, and GIS-style planning often combines distance, slope, resistance, masks, risk, and domain-specific movement costs. These costs tend to be spatially coherent. The TopographicMaps simulator demonstrates that \RFR{} can expose and exploit this coherence under a target-query work metric while preserving the same terrain-cost answer as \Dijkstra{}.
+
+The operational implication is not that the current Python implementation is a production robotics solver. It is that terrain-aware routing is a natural fit for partial ordering: large regions of the frontier may be safely accepted together, while steep slopes, barriers, and high-resistance zones create visible residual pressure.
+
+\section{Relationship to Existing Techniques}
+
+\Dijkstra{} enforces exactness by total global ordering. Delta-stepping \cite{meyer2003} groups tentative distances into buckets and can process light-edge relaxations in parallel, often trading strict ordering for controlled bucket processing. \RFR{} is related in spirit but differs in two important ways:
+
+\begin{enumerate}
+  \item \RFR{} treats bucket or band processing as a safety problem, not only as a fixed-width scheduling choice.
+  \item \RFR{} records residual pressure and can split or locally resolve an unsafe band rather than relying solely on a static bucket width.
+\end{enumerate}
+
+The practical comparison target is therefore not only \Dijkstra{}, but also bucketed, radix, delta-stepping, and domain-specialised shortest-path implementations.
+
+The invariant-band solver of Section~\ref{sec:invariant} makes the lineage exact: with band width fixed at $w_{\min}$ it coincides with Dial's bucket condition \cite{dial1969} generalised to real weights, and with delta-stepping at $\Delta=w_{\min}$, where minimum-weight edges are light and each bucket can be settled before heavier relaxations propagate outward. What \RFR{} adds to that lineage is (i) the general safety machinery for bands \emph{wider} than $w_{\min}$, where unconditional safety fails and inspection, splitting, or fallback is required, and (ii) the residual diagnostic account of where ordering pressure lives.
+
+The thesis itself --- that Dijkstra's total ordering is not required for exact SSSP --- has since received strong independent corroboration: Duan, Mao, Mao, Shu, and Yin give a deterministic $O(m\log^{2/3} n)$ algorithm for directed SSSP with real non-negative weights, the first to break the sorting barrier on sparse graphs \cite{duan2025}. Their result is theoretical and unrelated in mechanism, but it establishes at the level of asymptotic proof what this project pursues operationally: global frontier ordering is an implementation strategy, not a correctness requirement.
+
+\subsection{Incremental Search}
+
+Incremental methods such as D* Lite reuse previous search information when edge costs change. \RFR{} does not currently implement D* Lite's incremental consistency machinery. Its relevance is architectural: residual bands identify where ordering uncertainty lives, which could provide a natural repair unit for future dynamic variants. A dynamic \RFR{} extension would need to define invalidation, band repair, and predecessor repair rules explicitly before claiming equivalence to established incremental algorithms.
+
+\subsection{Hierarchical Pathfinding}
+
+Hierarchical methods such as HPA* \cite{botea2004} reduce search cost by abstracting a map into clusters and solving at multiple resolutions. \RFR{} addresses a different layer of the problem. It does not replace hierarchy; it changes how a frontier is ordered inside a level of representation. The two approaches are compatible: hierarchy can reduce the search domain, while \RFR{} can resolve the frontier within a cluster, corridor, or refined local region.
+
+This distinction is important for games. A production game pathing stack may still use navmeshes, HPA*, flow fields, or cached tactical maps. \RFR{}'s contribution is a safety-checked partial ordering mechanism that can sit inside such systems, especially where residual diagnostics are valuable.
+
+\section{Limitations and Non-Claims}
+\label{sec:limitations}
+
+The current state of \RFR{} supports several claims and explicitly rejects others.
+
+\subsection{Validated Claims}
+
+\begin{itemize}
+  \item \RFR{} preserves exact shortest-path distances on tested non-negative graph families.
+  \item Structured frontiers can be processed in safe batches.
+  \item The algorithm exposes where ordering pressure occurs through residual history, splits, fallback, and safe-batch ratios.
+  \item Adaptive policy revision improves behaviour when static graph features misclassify frontier ambiguity.
+  \item The topographic simulator shows a clear target-work reduction under the current work metric.
+  \item (v1.1) The invariant-band field solver computes exact distance fields $1.7\times$--$5.5\times$ faster than hand-written grid \Dijkstra{} at $512^2$--$2048^2$ points (Section~\ref{sec:invariantresults}).
+  \item The architecture creates practical integration points for map-native routing, diagnostics, and future local repair.
+\end{itemize}
+
+\subsection{Non-Claims}
+
+\begin{itemize}
+  \item The general-graph Python implementation is not faster than \Dijkstra{} on pre-built graph benchmarks.
+  \item The v1.0 reference spatial solver is $5$--$7\times$ slower than a plain array-based grid \Dijkstra{}; its measured advantage applies to graph-materialisation workflows only (Table~\ref{tab:gridnative}).
+  \item Invariant-band wall-clock gains require full-field computation on fields of roughly $10^5$ points or more; single-query workloads still favour A*.
+  \item \RFR{} is not expected to outperform \Dijkstra{} on every graph family.
+  \item Resolution efficiency is not identical to wall-clock speed.
+  \item The indexed frontier is not universally beneficial; it is useful only under policies that predict coherent structure.
+  \item The present implementation is not yet an incremental replanning algorithm and should not be represented as a replacement for D* Lite.
+  \item The present work does not claim to solve multi-agent pathfinding or conflict resolution.
+\end{itemize}
+
+\subsection{Implementation Bottlenecks}
+
+Current bottlenecks include:
+
+\begin{itemize}
+  \item Python-level band management overhead,
+  \item safe-band scans,
+  \item local sorting and local heap fallback,
+  \item insufficiently specialised data structures for ambiguous frontiers,
+  \item absence of GPU and compiled-core implementations of the invariant-band solver,
+  \item absence of validated incremental repair machinery for dynamic maps.
+\end{itemize}
+
+\section{Future Work}
+
+Promising next steps are:
+
+\begin{enumerate}
+  \item implement a low-overhead C++ or Rust frontier core to test wall-clock performance without Python interpreter overhead,
+  \item implement a split-capable indexed frontier,
+  \item add a cluster-specific basin frontier,
+  \item reduce safe-band sorting in coherent road-like frontiers,
+  \item extend the invariant-band execution model with GPU band kernels and a compiled (Rust or C++) core,
+  \item profile invariant-band scaling beyond $10^7$ points and on full-resolution DEM rasters,
+  \item distinguish target-query work from full-field computation in all demos and reports,
+  \item develop an incremental \RFR{} variant for dynamic costs and local repair,
+  \item integrate \RFR{} within hierarchical game pathing stacks such as clustered grids or navmesh regions,
+  \item fold the invariant-band solver into the packaged library behind the layered-field API, keeping the v1.0 solver as the exactness oracle.
+\end{enumerate}
+
+\section{Erratum (v1.1.1): Internal Closure}
+\label{sec:erratum}
+
+Versions 1.0.0--1.1.0 of this paper stated the batch safety relation with two
+conditions (outside precedence and outside candidate creation) and the
+implementation enforced exactly those two. Both the lemma sketch and the code
+omitted a necessary third condition: \emph{internal closure} of the band under
+relaxation.
+
+The omission admits incorrect results. Counterexample (edge list
+$S\!\to\!A$:1, $S\!\to\!B$:4, $S\!\to\!C$:9, $A\!\to\!C$:1, $C\!\to\!B$:1,
+$B\!\to\!D$:10; band width 10): all vertices fall into one band that passes
+both original checks. The improving chain $A$ lowers $C$ ($9\to2$), $C$ lowers
+$B$ ($4\to3$) runs entirely within the band, so $B$ is finalised at its stale
+label 4 and its outgoing edge never refires: the solver returns $d(D)=14$
+against the correct $d(D)=13$.
+
+The counterexample was found by a machine-checked implementation of the
+safety relation (Lean), constructed as an instantiation of the Cogenesis
+framework's requirement that safety conditions be stated as checkable
+relations. The checker enforced internal closure as part of
+the relation; the divergence between checker and implementation localised the
+omitted condition. The fix (v1.1.1, and the accompanying code release) adds
+the internal-closure check to the safety predicate; ambiguous bands split or
+fall back to local exact processing, as before.
+
+Scope of impact: the error affects the general-graph solver only, and only at
+band widths exceeding the minimum edge weight. The invariant-band corollary
+and field solver (Sections~\ref{sec:invariantcorollary}
+and~\ref{sec:invariantresults}) are unaffected by construction: with band
+width at most the minimum step cost, no within-band edge can exist, so
+internal closure holds vacuously. All v1.1.0 benchmark results stand. The
+regression suite now pins the counterexample across band widths, and a
+randomized differential test against \Dijkstra{} (2{,}400 runs, 400 graphs)
+passes with the corrected predicate.
+
+\section{Conclusion}
+
+Residual Frontier Refinement reframes exact shortest-path propagation as a problem of resolving only the frontier ordering uncertainty that can affect correctness. It replaces unconditional global heap ordering with conservative band safety checks, residual-guided splitting, and local exact fallback. The current implementation validates exactness, provides a useful diagnostic account of frontier ambiguity, and shows clear work-shape benefits on structured and spatial cases. Version 1.1 converts the thesis into a measured result: on cost fields, band independence proven from a static invariant and executed as vectorized batches computes exact distance fields $1.7\times$--$5.5\times$ faster than hand-written grid \Dijkstra{} at $512^2$--$2048^2$ points, while the general-graph implementation remains slower than \Dijkstra{} and single queries still favour A*. The defensible conclusion is now stronger than in v1.0: global total ordering is not inherent to shortest-path correctness --- it is one implementation strategy --- and where the required independence can be proven from static structure and spent as parallelism, discarding it is not merely exact but faster.
+
+\section*{Acknowledgements}
+
+The grid-native baseline benchmarks, the invariant-band corollary formulation, and the reference NumPy implementation of the invariant-band solver in this revision originated in an adversarial review session conducted with Claude (Anthropic). All figures are reproducible from the benchmark harness included in the release artefacts.
+
+\begin{thebibliography}{9}
+
+\bibitem{dijkstra1959}
+E. W. Dijkstra.
+\newblock A note on two problems in connexion with graphs.
+\newblock \emph{Numerische Mathematik}, 1:269--271, 1959.
+
+\bibitem{cormen2009}
+T. H. Cormen, C. E. Leiserson, R. L. Rivest, and C. Stein.
+\newblock \emph{Introduction to Algorithms}.
+\newblock MIT Press, third edition, 2009.
+
+\bibitem{dial1969}
+R. B. Dial.
+\newblock Algorithm 360: Shortest-path forest with topological ordering.
+\newblock \emph{Communications of the ACM}, 12(11):632--633, 1969.
+\newblock \url{https://doi.org/10.1145/363269.363610}
+
+\bibitem{meyer2003}
+U. Meyer and P. Sanders.
+\newblock Delta-stepping: A parallelizable shortest path algorithm.
+\newblock \emph{Journal of Algorithms}, 49(1):114--152, 2003.
+\newblock \url{https://doi.org/10.1016/S0196-6774(03)00076-2}
+
+\bibitem{koenig2002}
+S. Koenig and M. Likhachev.
+\newblock D* Lite.
+\newblock In \emph{Proceedings of the 18th National Conference on Artificial Intelligence (AAAI)}, pages 476--483, 2002.
+
+\bibitem{duan2025}
+R. Duan, J. Mao, X. Mao, X. Shu, and L. Yin.
+\newblock Breaking the sorting barrier for directed single-source shortest paths.
+\newblock arXiv:2504.17033, 2025.
+\newblock \url{https://arxiv.org/abs/2504.17033}
+
+\bibitem{botea2004}
+A. Botea, M. M\"uller, and J. Schaeffer.
+\newblock Near optimal hierarchical path-finding.
+\newblock \emph{Journal of Game Development}, 1(1):7--28, 2004.
+
+\end{thebibliography}
+
+\end{document}

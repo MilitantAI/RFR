@@ -1,6 +1,6 @@
 # Residual Frontier Refinement (RFR)
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21206454.svg)](https://doi.org/10.5281/zenodo.21206454)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20329104.svg)](https://doi.org/10.5281/zenodo.20329104)
 
 Exact shortest-path propagation with adaptive partial ordering over residual distance bands.
 
@@ -8,13 +8,15 @@ RFR replaces unconditional global priority-queue ordering with conservative band
 
 This repository contains the reference Python implementation, tests, benchmark artefacts, and the topographic routing simulator published with the whitepaper.
 
-**DOI (v1.1.0):** [10.5281/zenodo.21206454](https://doi.org/10.5281/zenodo.21206454)  
-**Concept DOI:** [10.5281/zenodo.20329104](https://doi.org/10.5281/zenodo.20329104)  
-**Paper (v1.1):** [RFR_WHITEPAPER_v1.1.pdf](RFR_WHITEPAPER_v1.1.pdf) | [LaTeX source](RFR_WHITEPAPER_v1.1.tex) &nbsp;&middot;&nbsp; v1.0: [pdf](RFR_WHITEPAPER.pdf) | [tex](RFR_WHITEPAPER.tex)
+**Concept DOI (latest release):** [10.5281/zenodo.20329104](https://doi.org/10.5281/zenodo.20329104)  
+**Previous v1.1.0 DOI:** [10.5281/zenodo.21206454](https://doi.org/10.5281/zenodo.21206454)  
+**Paper (v1.1.1):** [RFR_WHITEPAPER_v1.1.1.pdf](RFR_WHITEPAPER_v1.1.1.pdf) | [LaTeX source](RFR_WHITEPAPER_v1.1.1.tex) &nbsp;&middot;&nbsp; v1.1.0: [pdf](RFR_WHITEPAPER_v1.1.pdf) | [tex](RFR_WHITEPAPER_v1.1.tex)
 
 ## Status
 
-This is a research prototype (v1.1.0). It validates exactness against Dijkstra across tested graph families and exposes a work profile (safe batches, split pressure, local fallback, residual ambiguity).
+This is a research prototype (v1.1.1). It validates exactness against Dijkstra across tested graph families and exposes a work profile (safe batches, split pressure, local fallback, residual ambiguity).
+
+**Corrected in v1.1.1 — internal closure.** General-graph frontier bands are now accepted only when no within-band edge can still lower its target. This fixes stale finalisation through within-band improvement chains. The invariant-band field solver and all v1.1.0 benchmark results are unaffected; see [ERRATUM_v1.1.1.md](ERRATUM_v1.1.1.md) and [CHANGELOG.md](CHANGELOG.md).
 
 **New in v1.1 — invariant-band field solver.** For cost fields, band safety is provable from a static invariant (band width = minimum step cost), which removes all runtime safety checks; settling and relaxing whole bands as vectorized NumPy operations then converts the proven independence into wall-clock speed. On full-field solves it computes exact Dijkstra-identical distances **1.7x-5.5x faster than hand-written grid Dijkstra at 512^2-2048^2 points**, with the advantage growing with scale, reproduced across two independent environments (see [RESULTS.md](RESULTS.md) and whitepaper v1.1, Sections 5-6).
 
@@ -133,18 +135,4 @@ If you use this work, please cite the Zenodo record:
 @misc{petrik2026rfr,
   author       = {Petrik, Morgan},
   title        = {Residual Frontier Refinement: Exact Shortest-Path Propagation with Adaptive Partial Ordering},
-  year         = {2026},
-  publisher    = {Zenodo},
-  version      = {1.1.0},
-  doi          = {10.5281/zenodo.21206454},
-  url          = {https://doi.org/10.5281/zenodo.21206454}
-}
-```
-
-## License
-
-[Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/), matching the [Zenodo release](https://doi.org/10.5281/zenodo.21206454).
-
-## Author
-
-Morgan Petrik — [Militant.AI](https://militant.ai)
+  year         = {2026
